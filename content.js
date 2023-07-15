@@ -1,190 +1,142 @@
-// Create an element with an ID
 const createElement = (tagName, id) => {
     const element = document.createElement(tagName);
     element.id = id;
     return element;
 };
 
-// Show or hide an element
 const toggleElement = (element, shouldShow) => {
     element.style.display = shouldShow ? 'block' : 'none';
 };
 
-// Create an IndexedDB instance
+const promptDB = indexedDB.open('promptsDB', 1);
+
 let db;
-const request = indexedDB.open('promptsDB', 1);
-request.onerror = function(event) {
-    console.log('error opening database');
-};
-request.onsuccess = function(event) {
+promptDB.onerror = () => console.log('error opening database');
+promptDB.onsuccess = (event) => {
     db = event.target.result;
     loadPrompts();
 };
-request.onupgradeneeded = function(event) {
+promptDB.onupgradeneeded = (event) => {
     db = event.target.result;
-    const objectStore = db.createObjectStore('prompts', {keyPath: 'id', autoIncrement: true});
+    db.createObjectStore('prompts', {keyPath: 'id', autoIncrement: true});
 };
 
-// Function to load prompts from IndexedDB
-function loadPrompts() {
+const loadPrompts = () => {
     const transaction = db.transaction(['prompts'], 'readonly');
     const objectStore = transaction.objectStore('prompts');
-    objectStore.openCursor().onsuccess = function(event) {
+    objectStore.openCursor().onsuccess = (event) => {
         const cursor = event.target.result;
-        if (cursor) {
-            // Create the container for the saved prompt
-            let promptContainer = createElement('div', 'promptContainer');
+        if (!cursor) return;
 
-            // Add the text of the saved prompt
-            let promptText = createElement('p', 'promptText');
-            promptText.textContent = cursor.value.value.substring(0, 15) + '...';
-            promptContainer.appendChild(promptText);
+        const promptContainer = createElement('div', 'promptContainer');
+        const promptText = createElement('p', 'promptText');
+        const copyButton = createElement('button', 'copyButton');
+        const removeButton = createElement('img', 'removeButton');
 
-            // Add the copy button
-            let copyButton = createElement('button', 'copyButton');
-            copyButton.textContent = 'Copy';
-            copyButton.addEventListener('click', function () {
-                navigator.clipboard.writeText(cursor.value.value).then(() => {
-                    alert('Prompt copied to clipboard!');
-                });
-            });
-            promptContainer.appendChild(copyButton);
+        promptText.textContent = cursor.value.value.substring(0, 15) + '...';
+        copyButton.textContent = 'Copy';
+        removeButton.src = 'remove_icon.svg';
 
-            // Add a remove button
-            let removeButton = createElement('img', 'removeButton');
-            removeButton.src = 'remove_icon.svg';
-            removeButton.addEventListener('click', function () {
-                // Show the confirmation dialog
-                toggleElement(confirmDialog, true);
-                yesButton.onclick = function () {
-                    promptContainer.remove();
-                    // Remove the prompt from IndexedDB
-                    const deleteTransaction = db.transaction(['prompts'], 'readwrite');
-                    const deleteObjectStore = deleteTransaction.objectStore('prompts');
-                    const deleteRequest = deleteObjectStore.delete(cursor.value.id);
-                    deleteRequest.onsuccess = function(event) {
-                        console.log('Prompt removed from IndexedDB');
-                    };
-                    toggleElement(confirmDialog, false);
-                };
-            });
-            promptContainer.appendChild(removeButton);
+        copyButton.addEventListener('click', () => {
+            navigator.clipboard.writeText(cursor.value.value)
+                .then(() => alert('Prompt copied to clipboard!'));
+        });
 
-            sidebar.appendChild(promptContainer);
+        removeButton.addEventListener('click', () => {
+            toggleElement(confirmDialog, true);
+            yesButton.onclick = () => {
+                promptContainer.remove();
+                const deleteTransaction = db.transaction(['prompts'], 'readwrite');
+                const deleteObjectStore = deleteTransaction.objectStore('prompts');
+                const deleteRequest = deleteObjectStore.delete(cursor.value.id);
+                deleteRequest.onsuccess = () => console.log('Prompt removed from IndexedDB');
+                toggleElement(confirmDialog, false);
+            };
+        });
 
-            cursor.continue();
-        }
+        promptContainer.append(promptText, copyButton, removeButton);
+        sidebar.appendChild(promptContainer);
+
+        cursor.continue();
     };
-}
+};
 
-// Create the sidebar
 const sidebar = createElement('div', 'sidebar');
-document.body.appendChild(sidebar);
-
-// Create the show button
 const showButton = createElement('img', 'showButton');
+const hideButton = createElement('img', 'hideButton');
+const newPromptInput = createElement('textarea', 'newPromptInput');
+const saveHint = createElement('p', 'saveHint');
+const confirmDialog = createElement('div', 'confirmDialog');
+const yesButton = createElement('button', 'yesButton');
+const noButton = createElement('button', 'noButton');
+
 showButton.src = 'menu_icon.svg';
 showButton.alt = "Show sidebar";
+hideButton.src = 'close_icon.svg';
+hideButton.alt = "Hide sidebar";
+newPromptInput.placeholder = 'Enter a new prompt...';
+saveHint.textContent = 'Hit ↩️ to save';
+confirmDialog.textContent = 'Are you sure you want to delete this prompt?';
+yesButton.textContent = 'Yes';
+noButton.textContent = 'No';
+
 showButton.addEventListener('click', () => {
     toggleElement(sidebar, true);
     toggleElement(showButton, false);
     document.body.style.marginRight = '20%';
 });
-document.body.appendChild(showButton);
 
-// Create the hide button
-const hideButton = createElement('img', 'hideButton');
-hideButton.src = 'close_icon.svg';
-hideButton.alt = "Hide sidebar";
 hideButton.addEventListener('click', () => {
     toggleElement(sidebar, false);
     toggleElement(showButton, true);
     document.body.style.marginRight = '0';
 });
-sidebar.appendChild(hideButton);
 
-// Create the textarea for entering a new prompt
-const newPromptInput = createElement('textarea', 'newPromptInput');
-newPromptInput.placeholder = 'Enter a new prompt...';
-sidebar.appendChild(newPromptInput);
+newPromptInput.addEventListener('keypress', (e) => {
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
 
-// Create the hint for saving a prompt
-const saveHint = createElement('p', 'saveHint');
-saveHint.textContent = 'Hit ↩️ to save';
-sidebar.appendChild(saveHint);
+    const newPrompt = newPromptInput.value;
+    if (newPrompt.trim() === '') return;
 
-newPromptInput.addEventListener('keypress', function (e) {
-    if (e.key === 'Enter') {
-        e.preventDefault();
-        let newPrompt = newPromptInput.value;
-        if (newPrompt.trim() !== '') {
-            // Create the container for the saved prompt
-            let promptContainer = createElement('div', 'promptContainer');
+    const promptContainer = createElement('div', 'promptContainer');
+    const promptText = createElement('p', 'promptText');
+    const copyButton = createElement('button', 'copyButton');
+    const removeButton = createElement('img', 'removeButton');
 
-            // Add the text of the saved prompt
-            let promptText = createElement('p', 'promptText');
-            promptText.textContent = newPrompt.substring(0, 15) + '...';
-            promptContainer.appendChild(promptText);
+    promptText.textContent = newPrompt.substring(0, 15) + '...';
+    copyButton.textContent = 'Copy';
+    removeButton.src = 'remove_icon.svg';
 
-            // Add the copy button
-            let copyButton = createElement('button', 'copyButton');
-            copyButton.textContent = 'Copy';
-            copyButton.addEventListener('click', function () {
-                navigator.clipboard.writeText(newPrompt).then(() => {
-                    alert('Prompt copied to clipboard!');
-                });
-            });
-            promptContainer.appendChild(copyButton);
+    copyButton.addEventListener('click', () => {
+        navigator.clipboard.writeText(newPrompt)
+            .then(() => alert('Prompt copied to clipboard!'));
+    });
 
-            // Add a remove button
-            let removeButton = createElement('img', 'removeButton');
-            removeButton.src = 'remove_icon.svg';
-            removeButton.addEventListener('click', function () {
-                // Show the confirmation dialog
-                toggleElement(confirmDialog, true);
-                yesButton.onclick = function () {
-                    promptContainer.remove();
-                    // Remove the prompt from IndexedDB
-                    const transaction = db.transaction(['prompts'], 'readwrite');
-                    const objectStore = transaction.objectStore('prompts');
-                    const request = objectStore.delete(newPrompt);
-                    request.onsuccess = function(event) {
-                        console.log('Prompt removed from IndexedDB');
-                    };
-                    toggleElement(confirmDialog, false);
-                };
-            });
-            promptContainer.appendChild(removeButton);
+    removeButton.addEventListener('click', () => {
+        toggleElement(confirmDialog, true);
+        yesButton.onclick = () => {
+            promptContainer.remove();
+            const deleteTransaction = db.transaction(['prompts'], 'readwrite');
+            const deleteObjectStore = deleteTransaction.objectStore('prompts');
+            const deleteRequest = deleteObjectStore.delete(newPrompt);
+            deleteRequest.onsuccess = () => console.log('Prompt removed from IndexedDB');
+            toggleElement(confirmDialog, false);
+        };
+    });
 
-            sidebar.appendChild(promptContainer);
-            newPromptInput.value = '';
+    promptContainer.append(promptText, copyButton, removeButton);
+    sidebar.appendChild(promptContainer);
+    newPromptInput.value = '';
 
-            // Save the prompt to IndexedDB
-            const transaction = db.transaction(['prompts'], 'readwrite');
-            const objectStore = transaction.objectStore('prompts');
-            const request = objectStore.add({id: newPrompt, value: newPrompt});
-            request.onsuccess = function(event) {
-                console.log('Prompt added to IndexedDB');
-            };
-        }
-    }
+    const saveTransaction = db.transaction(['prompts'], 'readwrite');
+    const saveObjectStore = saveTransaction.objectStore('prompts');
+    const saveRequest = saveObjectStore.add({id: newPrompt, value: newPrompt});
+    saveRequest.onsuccess = () => console.log('Prompt added to IndexedDB');
 });
 
-// Create the confirmation dialog
-const confirmDialog = createElement('div', 'confirmDialog');
-confirmDialog.textContent = 'Are you sure you want to delete this prompt?';
-sidebar.appendChild(confirmDialog);
+noButton.addEventListener('click', () => toggleElement(confirmDialog, false));
 
-// Create the yes button for the confirmation dialog
-const yesButton = createElement('button', 'yesButton');
-yesButton.textContent = 'Yes';
-confirmDialog.appendChild(yesButton);
-
-// Create the no button for the confirmation dialog
-const noButton = createElement('button', 'noButton');
-noButton.textContent = 'No';
-noButton.addEventListener('click', () => {
-    // Hide the confirmation dialog
-    toggleElement(confirmDialog, false);
-});
-confirmDialog.appendChild(noButton);
+document.body.append(sidebar, showButton);
+sidebar.append(hideButton, newPromptInput, saveHint, confirmDialog);
+confirmDialog.append(yesButton, noButton);

@@ -1,0 +1,104 @@
+#sidebar {
+    width: 20%;
+    height: 100vh;
+    position: fixed;
+    right: 0;
+    top: 0;
+    background-color: #FAFAFA;
+    padding: 20px;
+    display: none;
+    z-index: 9999;
+    border-radius: 0 0 0.5rem 0;
+    box-shadow: 0px 4px 27px 0px rgba(0, 0, 0, 0.10);
+    transition: 0.3s;
+}
+
+#showButton, #hideButton {
+    position: fixed;
+    right: 0;
+    top: 0;
+    cursor: pointer;
+    transition: opacity 0.3s ease; /* transition on opacity */
+}
+
+#showButton {
+    opacity: 1; /* default state */
+}
+
+#hideButton {
+    opacity: 1; /* default state */
+}
+
+
+#showButton {
+    position: fixed;
+    right: 0;
+    top: 0;
+    cursor: pointer;
+}
+
+#hideButton {
+    cursor: pointer;
+}
+
+#newPromptInput {
+    width: 100%;
+    border-radius: 0.5rem;
+    border: none;
+    padding: 10px;
+    font-family: 'Inter';
+    margin-top: 10px;
+}
+
+#saveHint {
+    font-size: 0.8rem;
+    color: #A9A9A9;
+    margin-top: 10px;
+}
+
+#promptContainer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #E7E7E7;
+    color: #545454;
+    border-radius: 0.5rem;
+    padding: 10px;
+    margin-top: 10px;
+    cursor: pointer;
+    box-shadow: 0px 4px 27px 0px rgba(0, 0, 0, 0.10);
+}
+
+#promptText {
+    margin-right: 10px;
+}
+
+#copyButton {
+    background-color: transparent;
+    border: none;
+    cursor: pointer;
+}
+
+#removeButton {
+    cursor: pointer;
+}
+
+#confirmDialog {
+    background-color: #FAFAFA;
+    padding: 20px;
+    border-radius: 0.5rem;
+    box-shadow: 0px 4px 27px 0px rgba(0, 0, 0, 0.10);
+    margin-top: 20px;
+    display: none;
+}
+
+#yesButton, #noButton {
+    margin-right: 10px;
+    background-color: #E7E7E7;
+    color: #545454;
+    border-radius: 0.5rem;
+    border: none;
+    padding: 10px;
+    cursor: pointer;
+    font-family: 'Inter';
+}
